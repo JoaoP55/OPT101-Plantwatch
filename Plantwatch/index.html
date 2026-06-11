@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PlantWatch</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=DM+Mono:wght@300;400;500&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg:         #f0ede6;
+  --surface:    #faf8f4;
+  --border:     #ddd8ce;
+  --green:      #2c4a2e;
+  --green-mid:  #3d6b40;
+  --green-pale: #93b896;
+  --earth:      #7a5c38;
+  --text:       #1e2d1f;
+  --muted:      #7a8c7b;
+  --red:        #8b3a3a;
+  --blue:       #2e5a7a;
+  --white:      #fefdfb;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Jost', sans-serif;
+  font-weight: 300;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+header {
+  background: var(--green);
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #d4e8d5;
+  letter-spacing: 0.04em;
+}
+.logo span { color: #faf8f4; font-weight: 300; }
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.conn-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.68rem;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 0.06em;
+}
+.conn-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #555;
+  transition: all .4s;
+}
+.conn-status.on .conn-dot  { background: #7ec87f; box-shadow: 0 0 6px #7ec87f; }
+.conn-status.on            { color: rgba(255,255,255,0.75); }
+
+/* indicador de atualização */
+.update-info {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem;
+  color: rgba(255,255,255,0.3);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  letter-spacing: 0.04em;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  display: inline-block;
+  font-size: 0.8rem;
+  line-height: 1;
+  animation: spin .8s linear infinite;
+  opacity: 0;
+  transition: opacity .2s;
+}
+.spinner.visible { opacity: 1; }
+
+/* ── LAYOUT ── */
+.layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  grid-template-rows: auto 1fr;
+  gap: 0;
+  min-height: calc(100vh - 56px);
+}
+
+/* ── SENSOR BAR ── */
+.sensor-bar {
+  grid-column: 1 / -1;
+  background: var(--green-mid);
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid rgba(0,0,0,0.15);
+}
+
+.s-card {
+  flex: 1;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  border-right: 1px solid rgba(255,255,255,0.08);
+  transition: background .2s;
+}
+.s-card:last-child { border-right: none; }
+
+.s-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(255,255,255,0.45);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.s-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 1.35rem;
+  font-weight: 400;
+  color: #e8f5e9;
+  line-height: 1;
+  transition: all .4s;
+}
+.s-val.empty { color: rgba(255,255,255,0.2); font-size: 1rem; }
+
+/* ── SIDEBAR ── */
+aside {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── FORM ── */
+.form-block {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.block-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--green);
+  letter-spacing: 0.12em;
+  margin-bottom: 1.2rem;
+  text-transform: uppercase;
+}
+
+.field {
+  margin-bottom: 0.85rem;
+}
+.field label {
+  display: block;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  font-weight: 500;
+  margin-bottom: 0.3rem;
+}
+.field input, .field textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.5rem 0.65rem;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 300;
+  color: var(--text);
+  outline: none;
+  transition: border-color .2s;
+}
+.field input:focus, .field textarea:focus {
+  border-color: var(--green-pale);
+}
+.field textarea { resize: vertical; min-height: 52px; }
+
+.range-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.section-sep {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--green-pale);
+  font-weight: 500;
+  margin: 1rem 0 0.7rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.btn-save {
+  width: 100%;
+  margin-top: 1.1rem;
+  background: var(--green);
+  color: #d4e8d5;
+  border: none;
+  border-radius: 4px;
+  padding: 0.7rem;
+  font-family: 'Jost', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background .2s;
+}
+.btn-save:hover { background: var(--green-mid); }
+
+/* ── PLANT LIST ── */
+.list-block {
+  padding: 1.5rem;
+  flex: 1;
+}
+
+.plant-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  background: var(--white);
+  transition: all .15s;
+}
+.plant-row:hover { border-color: var(--green-pale); }
+.plant-row.active {
+  border-color: var(--green);
+  background: #f0f5f0;
+}
+
+.p-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  flex-shrink: 0;
+  transition: all .3s;
+}
+.p-dot.ok    { background: var(--green-pale); }
+.p-dot.alert { background: var(--red); box-shadow: 0 0 5px rgba(139,58,58,0.4); }
+
+.p-name {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.p-species {
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.btn-rm {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--border);
+  font-size: 0.9rem;
+  padding: 2px 5px;
+  border-radius: 3px;
+  transition: color .2s;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.btn-rm:hover { color: var(--red); }
+
+.empty-msg {
+  text-align: center;
+  padding: 2rem 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+/* ── MAIN PANEL ── */
+main {
+  padding: 2rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  text-align: center;
+  gap: 0.75rem;
+}
+.welcome-icon {
+  width: 64px; height: 64px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 0.5rem;
+}
+.welcome-icon svg { opacity: 0.3; }
+.welcome h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.5rem;
+  font-weight: 400;
+  color: var(--green);
+}
+.welcome p { font-size: 0.83rem; color: var(--muted); max-width: 240px; line-height: 1.7; }
+
+.banner {
+  border-radius: 6px;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+.banner.ok    { background: var(--green); }
+.banner.alert { background: var(--red); }
+.banner.wait  { background: #4a4a4a; }
+
+.banner-icon {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.banner-icon svg { opacity: 0.9; }
+
+.banner-text h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: white;
+}
+.banner-text p { font-size: 0.8rem; color: rgba(255,255,255,0.65); margin-top: 0.15rem; }
+
+.gauges {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.gauge-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.25rem 1rem 1rem;
+  text-align: center;
+}
+
+.g-title {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+  font-weight: 500;
+  margin-bottom: 1rem;
+}
+
+.gauge-wrap {
+  position: relative;
+  width: 96px; height: 96px;
+  margin: 0 auto 0.75rem;
+}
+.g-svg { width: 96px; height: 96px; transform: rotate(-90deg); }
+.g-track { fill: none; stroke: var(--border); stroke-width: 7; }
+.g-fill  {
+  fill: none; stroke-width: 7; stroke-linecap: round;
+  transition: stroke-dashoffset .9s cubic-bezier(.4,0,.2,1), stroke .4s;
+}
+.g-num {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: var(--text);
+}
+
+.g-range {
+  font-size: 0.68rem;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+}
+.g-range b { color: var(--green-mid); font-weight: 500; }
+
+.g-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.18rem 0.6rem;
+  border-radius: 20px;
+}
+.g-badge.ok    { background: rgba(44,74,46,0.1);  color: var(--green); }
+.g-badge.low   { background: rgba(46,90,122,0.1); color: var(--blue); }
+.g-badge.high  { background: rgba(139,58,58,0.1); color: var(--red); }
+
+.alerts-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.alerts-head {
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  font-weight: 500;
+}
+.alert-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+.alert-item:last-child { border-bottom: none; }
+.alert-item.low  { border-left: 3px solid var(--blue); }
+.alert-item.high { border-left: 3px solid var(--red); }
+.a-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+  margin-top: 0.15rem;
+}
+
+.notes-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.notes-head {
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  font-weight: 500;
+}
+.notes-body {
+  padding: 1rem 1.25rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.toast {
+  position: fixed;
+  bottom: 1.5rem; right: 1.5rem;
+  background: var(--green);
+  color: #d4e8d5;
+  padding: 0.7rem 1.2rem;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  font-weight: 400;
+  z-index: 9999;
+  transform: translateY(12px);
+  opacity: 0;
+  transition: all .25s;
+  pointer-events: none;
+}
+.toast.err { background: var(--red); color: #fce8e8; }
+.toast.show { transform: translateY(0); opacity: 1; }
+
+@media (max-width: 800px) {
+  .layout { grid-template-columns: 1fr; }
+  .gauges { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Plant<span>Watch</span></div>
+  <div class="header-right">
+    <!-- indicador de atualização automática -->
+    <div class="update-info">
+      <span class="spinner" id="spinner">↻</span>
+      <span id="last-update">—</span>
+    </div>
+    <div class="conn-status" id="conn">
+      <div class="conn-dot"></div>
+      <span id="conn-txt">aguardando arduino</span>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- SENSOR BAR -->
+  <div class="sensor-bar">
+    <div class="s-card">
+      <div class="s-label">Temperatura</div>
+      <div class="s-val empty" id="sv-temp">—</div>
+    </div>
+    <div class="s-card">
+      <div class="s-label">Umidade do Ar</div>
+      <div class="s-val empty" id="sv-air">—</div>
+    </div>
+    <div class="s-card">
+      <div class="s-label">Umidade do Solo</div>
+      <div class="s-val empty" id="sv-soil">—</div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <aside>
+    <div class="form-block">
+      <div class="block-title">Nova Planta</div>
+
+      <div class="field">
+        <label>Nome *</label>
+        <input type="text" id="f-name" placeholder="Ex: Samambaia da sala">
+      </div>
+      <div class="field">
+        <label>Espécie</label>
+        <input type="text" id="f-species" placeholder="Ex: Nephrolepis exaltata">
+      </div>
+
+      <div class="section-sep">Temperatura (°C)</div>
+      <div class="range-row">
+        <div class="field">
+          <label>Mínima</label>
+          <input type="number" id="f-tmin" placeholder="18" step="0.5">
+        </div>
+        <div class="field">
+          <label>Máxima</label>
+          <input type="number" id="f-tmax" placeholder="28" step="0.5">
+        </div>
+      </div>
+
+      <div class="section-sep">Umidade do Ar (%)</div>
+      <div class="range-row">
+        <div class="field">
+          <label>Mínima</label>
+          <input type="number" id="f-amin" placeholder="40" min="0" max="100">
+        </div>
+        <div class="field">
+          <label>Máxima</label>
+          <input type="number" id="f-amax" placeholder="80" min="0" max="100">
+        </div>
+      </div>
+
+      <div class="section-sep">Umidade do Solo (%)</div>
+      <div class="range-row">
+        <div class="field">
+          <label>Mínima</label>
+          <input type="number" id="f-smin" placeholder="30" min="0" max="100">
+        </div>
+        <div class="field">
+          <label>Máxima</label>
+          <input type="number" id="f-smax" placeholder="70" min="0" max="100">
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:.5rem">
+        <label>Observações</label>
+        <textarea id="f-notes" placeholder="Prefere luz indireta..."></textarea>
+      </div>
+
+      <button class="btn-save" onclick="addPlant()">Salvar Planta</button>
+    </div>
+
+    <div class="list-block">
+      <div class="block-title">Minhas Plantas</div>
+      <div id="plants-list">
+        <div class="empty-msg">Nenhuma planta cadastrada.<br>Adicione a primeira acima.</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main id="detail">
+    <div class="welcome">
+      <div class="welcome-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 22V12M12 12C12 7 7 4 3 6M12 12C12 7 17 4 21 6"/>
+        </svg>
+      </div>
+      <h3>Selecione uma planta</h3>
+      <p>Escolha uma planta na lista para ver a análise dos sensores.</p>
+    </div>
+  </main>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CORREÇÃO: usa o mesmo host/IP de onde a página foi carregada.
+// Assim funciona tanto no localhost quanto em outros computadores da rede.
+const API = `${window.location.protocol}//${window.location.hostname}:5000/api`;
+
+let plants = [];
+let activeId = null;
+let checkTimer = null;
+
+function $id(id) { return document.getElementById(id); }
+
+// ── Toast ──
+function toast(msg, err = false) {
+  const t = $id('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (err ? ' err' : '');
+  requestAnimationFrame(() => t.classList.add('show'));
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── Sensor polling ──
+async function pollSensors() {
+  // Mostra spinner durante a requisição
+  const sp = $id('spinner');
+  if (sp) sp.classList.add('visible');
+
+  try {
+    const r = await fetch(`${API}/reading`);
+    const d = await r.json();
+
+    const conn = $id('conn');
+    const txt  = $id('conn-txt');
+    if (d.serial?.connected) {
+      conn.className = 'conn-status on';
+      txt.textContent = d.serial.port || 'conectado';
+    } else {
+      conn.className = 'conn-status';
+      txt.textContent = d.serial?.error || 'desconectado';
+    }
+
+    setSensor('sv-temp', d.temp, '°C');
+    setSensor('sv-air',  d.air,  '%');
+    setSensor('sv-soil', d.soil, '%');
+
+    // Atualiza horário da última leitura
+    const lu = $id('last-update');
+    if (lu) {
+      const n = new Date();
+      const hh = String(n.getHours()).padStart(2,'0');
+      const mm = String(n.getMinutes()).padStart(2,'0');
+      const ss = String(n.getSeconds()).padStart(2,'0');
+      lu.textContent = `${hh}:${mm}:${ss}`;
+    }
+  } catch {
+    const lu = $id('last-update');
+    if (lu) lu.textContent = 'sem conexão';
+  } finally {
+    if (sp) sp.classList.remove('visible');
+  }
+}
+
+function setSensor(id, val, unit) {
+  const el = $id(id);
+  if (val != null) {
+    el.textContent = val + unit;
+    el.className = 's-val';
+  } else {
+    el.textContent = '—';
+    el.className = 's-val empty';
+  }
+}
+
+// ── Plants ──
+async function loadPlants() {
+  const r = await fetch(`${API}/plants`);
+  plants = await r.json();
+  renderList();
+}
+
+function renderList() {
+  const el = $id('plants-list');
+  if (!plants.length) {
+    el.innerHTML = '<div class="empty-msg">Nenhuma planta cadastrada.<br>Adicione a primeira acima.</div>';
+    return;
+  }
+  el.innerHTML = plants.map(p => `
+    <div class="plant-row ${p.id === activeId ? 'active' : ''}" id="pr-${p.id}" onclick="selectPlant(${p.id})">
+      <div class="p-dot" id="dot-${p.id}"></div>
+      <div style="flex:1;min-width:0">
+        <div class="p-name">${p.name}</div>
+        ${p.species ? `<div class="p-species">${p.species}</div>` : ''}
+      </div>
+      <button class="btn-rm" onclick="event.stopPropagation();deletePlant(${p.id})">×</button>
+    </div>`).join('');
+}
+
+async function addPlant() {
+  const name = $id('f-name').value.trim();
+  if (!name) { toast('Informe o nome da planta.', true); return; }
+
+  const body = {
+    name,
+    species:  $id('f-species').value.trim(),
+    notes:    $id('f-notes').value.trim(),
+    temp_min: parseFloat($id('f-tmin').value) || 15,
+    temp_max: parseFloat($id('f-tmax').value) || 35,
+    air_min:  parseFloat($id('f-amin').value) || 30,
+    air_max:  parseFloat($id('f-amax').value) || 90,
+    soil_min: parseFloat($id('f-smin').value) || 20,
+    soil_max: parseFloat($id('f-smax').value) || 80,
+  };
+
+  const r = await fetch(`${API}/plants`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (r.ok) {
+    ['f-name','f-species','f-notes','f-tmin','f-tmax','f-amin','f-amax','f-smin','f-smax']
+      .forEach(id => $id(id).value = '');
+    toast(`"${name}" salva.`);
+    await loadPlants();
+  } else {
+    toast('Erro ao salvar.', true);
+  }
+}
+
+async function deletePlant(id) {
+  if (!confirm('Remover esta planta?')) return;
+  await fetch(`${API}/plants/${id}`, { method: 'DELETE' });
+  if (activeId === id) { activeId = null; showWelcome(); }
+  await loadPlants();
+  toast('Planta removida.');
+}
+
+// ── Analysis ──
+function selectPlant(id) {
+  activeId = id;
+  renderList();
+  clearInterval(checkTimer);
+  checkPlant();
+  checkTimer = setInterval(checkPlant, 2000);
+}
+
+async function checkPlant() {
+  if (!activeId) return;
+  try {
+    const r = await fetch(`${API}/plants/${activeId}/check`);
+    const d = await r.json();
+    if (d.error === 'Sem leitura dos sensores') { renderNoSensor(); return; }
+    if (!r.ok) return;
+    renderAnalysis(d);
+    const dot = $id(`dot-${activeId}`);
+    if (dot) dot.className = `p-dot ${d.status}`;
+  } catch {}
+}
+
+function showWelcome() {
+  $id('detail').innerHTML = `
+    <div class="welcome">
+      <div class="welcome-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 22V12M12 12C12 7 7 4 3 6M12 12C12 7 17 4 21 6"/>
+        </svg>
+      </div>
+      <h3>Selecione uma planta</h3>
+      <p>Escolha uma planta na lista para ver a análise dos sensores.</p>
+    </div>`;
+}
+
+function renderNoSensor() {
+  $id('detail').innerHTML = `
+    <div class="banner wait">
+      <div class="banner-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <div class="banner-text">
+        <h3>Sem leitura dos sensores</h3>
+        <p>Verifique se o Arduino receptor está conectado via USB.</p>
+      </div>
+    </div>`;
+}
+
+function renderAnalysis({ plant, reading, status, alerts }) {
+  const b = status === 'ok'
+    ? { cls: 'ok',    title: plant.name, sub: 'Todos os parâmetros dentro do ideal.',
+        icon: `<path d="M20 6L9 17l-5-5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>` }
+    : { cls: 'alert', title: plant.name, sub: `${alerts.length} alerta${alerts.length > 1 ? 's' : ''} — veja as recomendações abaixo.`,
+        icon: `<path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="white" stroke-width="1.8" fill="none"/>` };
+
+  const bannerHtml = `
+    <div class="banner ${b.cls}">
+      <div class="banner-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24">${b.icon}</svg>
+      </div>
+      <div class="banner-text">
+        <h3>${b.title}</h3>
+        <p>${b.sub}</p>
+      </div>
+    </div>`;
+
+  function gauge(val, min, max, label, unit) {
+    const R = 40, circ = 2 * Math.PI * R;
+    const pct = val != null ? Math.max(0, Math.min(100, val)) / 100 : 0;
+    const offset = circ * (1 - pct);
+    const ok   = val != null && val >= min && val <= max;
+    const low  = val != null && val < min;
+    const color = ok ? '#3d6b40' : (low ? '#2e5a7a' : '#8b3a3a');
+    const badgeCls = ok ? 'ok' : (low ? 'low' : 'high');
+    const badgeTxt = val == null ? '—' : (ok ? 'Normal' : (low ? 'Baixo' : 'Alto'));
+    const display  = val != null ? `${val}${unit}` : '—';
+    return `
+      <div class="gauge-card">
+        <div class="g-title">${label}</div>
+        <div class="gauge-wrap">
+          <svg class="g-svg" viewBox="0 0 96 96">
+            <circle class="g-track" cx="48" cy="48" r="${R}"/>
+            <circle class="g-fill" cx="48" cy="48" r="${R}"
+              stroke="${color}"
+              stroke-dasharray="${circ}"
+              stroke-dashoffset="${offset}"/>
+          </svg>
+          <div class="g-num">${display}</div>
+        </div>
+        <div class="g-range">Ideal: <b>${min}–${max}${unit}</b></div>
+        <div class="g-badge ${badgeCls}">${badgeTxt}</div>
+      </div>`;
+  }
+
+  const gaugesHtml = `
+    <div class="gauges">
+      ${gauge(reading.temp, plant.temp_min, plant.temp_max, 'Temperatura', '°C')}
+      ${gauge(reading.air,  plant.air_min,  plant.air_max,  'Umidade do Ar', '%')}
+      ${gauge(reading.soil, plant.soil_min, plant.soil_max, 'Umidade do Solo', '%')}
+    </div>`;
+
+  const alertsHtml = alerts.length ? `
+    <div class="alerts-card">
+      <div class="alerts-head">Recomendações</div>
+      ${alerts.map(a => `
+        <div class="alert-item ${a.type}">
+          <div style="flex:1">${a.msg}</div>
+          <div class="a-val">Atual: ${a.value}${a.unit}</div>
+        </div>`).join('')}
+    </div>` : '';
+
+  const notesHtml = plant.notes ? `
+    <div class="notes-card">
+      <div class="notes-head">Observações</div>
+      <div class="notes-body">${plant.notes}</div>
+    </div>` : '';
+
+  $id('detail').innerHTML = bannerHtml + gaugesHtml + alertsHtml + notesHtml;
+}
+
+// ── Init ──
+loadPlants();
+pollSensors();
+setInterval(pollSensors, 2000); // atualiza sensores a cada 2 segundos
+</script>
+</body>
+</html>

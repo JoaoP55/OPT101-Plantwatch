@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1781131733435,
+    "name": "Lavanda",
+    "species": "",
+    "notes": "Gosta de sol pleno\nSolo leve e arenoso",
+    "temp_min": 5.0,
+    "temp_max": 35.0,
+    "air_min": 30.0,
+    "air_max": 70.0,
+    "soil_min": 20.0,
+    "soil_max": 60.0
+  }
+]
