@@ -8,10 +8,13 @@ Monitor de plantas com Arduino — Temperatura, Umidade do Ar e Umidade do Solo.
 
 ```
 plantwatch/
+├── Codigos_arduinos
+|      ├── Emissor_Ar.ino
+|      ├── Emissor_Solo.ino
+|      └── Receptor.ino
 ├── app.py          ← Backend Flask (roda no PC)
 ├── index.html      ← Frontend (aberto pelo Flask)
 ├── plants.json     ← Banco de dados das plantas
-├── arduino.ino     ← Código do Arduino
 └── requirements.txt
 ```
 
@@ -28,11 +31,9 @@ pip install flask flask-cors pyserial
 ### 2. Carregue o código no Arduino
 
 1. Abra o **Arduino IDE**
-2. Instale a biblioteca **DHT sensor library** (by Adafruit)
-   Instale a biblioteca **https://github.com/adafruit/Adafruit_Sensor/releases/tag/1.1.15**
+2. Instale a biblioteca **https://github.com/adafruit/Adafruit_Sensor/releases/tag/1.1.15**
    Instale a biblioteca **https://github.com/adafruit/dht-sensor-library**
-   - Menu → Sketch → Include Library → Manage Libraries → buscar "DHT sensor library"
-3. Abra `arduino.ino` e envie para o Arduino
+   - Menu → Sketch → Include Library → add .ZIP library → (As duas bibliotecas acima)
 
 ### 3. Rode o backend
 
